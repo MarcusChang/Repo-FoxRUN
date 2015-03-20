@@ -1,0 +1,11 @@
+#!/bin/bash
+
+currentPath=$(pwd)
+
+#Run JS Marionette Test
+echo "ave-marionette started"    
+dest="$currentPath/smoketest/marionettetest"
+pushd $dest > /dev/null
+ave-broker --restart
+vcsjob execute -j. -t ave-marionette-test
+popd > /dev/null

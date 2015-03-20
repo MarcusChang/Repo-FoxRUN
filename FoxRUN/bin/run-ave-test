@@ -1,0 +1,21 @@
+#!/bin/bash
+
+WORKSPACE_ROOT=$HOME/.ave
+UTILS_ROOT=$WORKSPACE_ROOT/webapptest
+make_goal="gaia-$1-test"
+make_params="app_name=$2 device=$3"
+case $1 in
+    endurance)
+        make_params="$make_params iterations=$4 checkpoint=$5";;
+    mtbf)
+        make_params="$make_params MTBF_TIME=$4";;
+    b2gperf)
+        make_params="$make_params iterations=$4";;
+    performance)
+        make_params="$make_params iterations=$4";;
+esac
+
+pushd $UTILS_ROOT > /dev/null
+make $make_goal $make_params #&> $UTILS_ROOT/aaaaa.txt
+popd > /dev/null
+

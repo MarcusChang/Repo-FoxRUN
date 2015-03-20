@@ -1,0 +1,59 @@
+#!/bin/bash
+
+#variables
+
+if [ ! -d ~/.mozilla/firefox ]
+then
+	echo "please install firefox browser firstly"
+	exit 1
+else
+	FIREFOX_ADDONS_ABDHELPER=adbhelper@mozilla.org
+	FIREFOX_ADDONS_FXOSSIMULATOR=fxos_1_2_simulator@mozilla.org
+	FIREFOX_EXTENSION_PATH="$(cat ~/.mozilla/firefox/profiles.ini | grep Path)" 
+	FIREFOX_EXTENSION_PATH_TRUNCATE="$(echo $FIREFOX_EXTENSION_PATH | cut -c6-)"
+	if [ ! -d ~/.mozilla/firefox/$FIREFOX_EXTENSION_PATH_TRUNCATE/extensions/$FIREFOX_ADDONS_ABDHELPER ]
+	then
+		mkdir ~/tmp/$FIREFOX_ADDONS_ABDHELPER
+	    pushd ~/tmp/$FIREFOX_ADDONS_ABDHELPER > /dev/null
+        #install firefox addons adbhelper
+        echo "we are going to download adbhelper"   
+	    wget -c https://ftp.mozilla.org/pub/mozilla.org/labs/fxos-simulator/adb-helper/linux64/adbhelper-linux64-latest.xpi
+   		popd > /dev/null
+	    if [ ! -f ~/tmp/$FIREFOX_ADDONS_ABDHELPER/adbhelper-linux64-latest.xpi ]
+	    then
+	    	echo "FATAL error: can NOT download adbhelper-linux64-latest.xpi"
+	    else
+	    	echo "we are going to install adbhelper@mozilla.org"
+	    	cp ~/tmp/$FIREFOX_ADDONS_ABDHELPER/adbhelper-linux64-latest.xpi ./ 
+	    	rm ~/tmp/$FIREFOX_ADDONS_ABDHELPER/ -rf
+	    	gnome-terminal -x firefox adbhelper-linux64-latest.xpi 
+#	    	unzip adbhelper-linux64-latest.xpi
+#	    	cp ~/tmp/$FIREFOX_ADDONS_ABDHELPER  ~/.mozilla/firefox/$FIREFOX_EXTENSION_PATH_TRUNCATE/extensions/ -r
+#	    	rm ~/tmp/$FIREFOX_ADDONS_ABDHELPER -rf
+#			gnome-terminal -x firefox -url about:newaddon?id=$FIREFOX_ADDONS_ABDHELPER 
+	    fi
+	fi
+	
+	if [ ! -d ~/.mozilla/firefox/$FIREFOX_EXTENSION_PATH_TRUNCATE/extensions/$FIREFOX_ADDONS_FXOSSIMULATOR ]
+	then
+		mkdir ~/tmp/$FIREFOX_ADDONS_FXOSSIMULATOR
+	    pushd ~/tmp/$FIREFOX_ADDONS_FXOSSIMULATOR > /dev/null
+        #install firefox addons fxos simulator
+        echo "we are going to download fxos simulator"   
+	    wget -c https://ftp.mozilla.org/pub/mozilla.org/labs/fxos-simulator/1.2/linux64/fxos_1_2_simulator-linux64-latest.xpi
+		popd > /dev/null  
+	    if [ ! -f ~/tmp/$FIREFOX_ADDONS_FXOSSIMULATOR/fxos_1_2_simulator-linux64-latest.xpi ]
+	    then
+	    	echo "FATAL error: can NOT download fxos_1_2_simulator-linux64-latest.xpi"
+	    else
+	    	echo "we are going to install fxos_1_2_simulator@mozilla.org"
+	    	cp ~/tmp/$FIREFOX_ADDONS_FXOSSIMULATOR/fxos_1_2_simulator-linux64-latest.xpi ./ 
+	    	rm ~/tmp/$FIREFOX_ADDONS_FXOSSIMULATOR/ -rf	    	
+	    	gnome-terminal -x firefox fxos_1_2_simulator-linux64-latest.xpi 
+#	    	unzip fxos_1_2_simulator-linux64-latest.xpi
+#	    	cp ~/tmp/$FIREFOX_ADDONS_FXOSSIMULATOR  ~/.mozilla/firefox/$FIREFOX_EXTENSION_PATH_TRUNCATE/extensions/ -r
+#	    	rm ~/tmp/$FIREFOX_ADDONS_FXOSSIMULATOR -rf
+#			gnome-terminal -x firefox -url about:newaddon?id=$FIREFOX_ADDONS_FXOSSIMULATOR
+	    fi
+	fi	
+fi

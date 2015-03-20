@@ -1,0 +1,217 @@
+#!/bin/bash
+
+#webapps local deployment
+
+#variables
+NOTHING_TO_COMMIT="nothing to commit, working directory clean"
+declare -a webapps_list=(album entrance movies walkman)
+declare -a webapps_port=(8485 8486 8487 8488)
+NODE=`which node`
+
+# to create base working directory
+if [ ! -d $(pwd)/webapps ]
+then
+    echo "to creat based working directory locally"
+    mkdir $(pwd)/webapps
+    mkdir $(pwd)/webapps/logs
+    mkdir $(pwd)/webapps/pids
+else
+    echo "working directory is already created locally"
+fi
+
+# function to clone webapps projects by name
+clone_apps(){
+#get app name
+appname=$1
+if [ ! -d $(pwd)/webapps/$appname ]
+then
+    pushd $(pwd)/webapps > /dev/null
+    echo "we are going to clone $appname"
+    if ! git clone git@code.marcus_chang.com:webapps/$appname.git
+    then
+	    echo "FATAL error: clone $appname get failed"
+#    	exit 1
+    fi
+    popd > /dev/null
+else
+    echo "$appname working directory does already exist"
+fi    
+}
+
+# function to build webapps projects by name
+build_apps(){
+#get app name
+appname=$1
+if [ ! -f $(pwd)/webapps/$appname/Makefile ]
+then
+    echo "FATAL error: can NOT make apps due to lack of Makefile"
+#   	exit 1
+else
+    pushd $(pwd)/webapps/$appname > /dev/null
+    echo "pull latest codes from remote repository"
+    git pull
+   	if [ "$NOTHING_TO_COMMIT" != "$(git status | grep nothing)" ]
+   	then
+   		echo "clean ignored and non-igonored files so as to rebuild everything from scratch"
+   		git clean -f -x
+
+    else
+    	echo "working directory clean"
+    fi
+   	echo "we are going to make $appname in release mode"
+    if ! make release
+    then
+	    echo "FATAL error: build $appname get failed"
+#    	exit 1
+    fi
+    popd > /dev/null
+fi    
+}
+
+get_app(){
+appname=$1
+if [ ! -d $(pwd)/webapps/$appname ]
+then
+    pushd $(pwd)/webapps > /dev/null
+    mkdir $appname
+    mkdir $appname/dist
+    popd > /dev/null
+    pushd $(pwd)/webapps/$appname/dist > /dev/null
+    wget -c http://android-ci.marcus_chang.com/job/webapps-$appname/lastSuccessfulBuild/artifact/package.tgz
+    tar xf package.tgz
+    rm package.tgz
+    popd > /dev/null
+fi   
+}
+
+# function to start webapps projects by name
+start_app(){
+appname=$1
+appport=$2
+PORT=$appport NODE_ENV=production "$NODE" "$(pwd)/webapps/$appname/dist/server.js" 1>>"$(pwd)/webapps/logs/$appname.log" 2>&1 &
+echo $! > "$(pwd)/webapps/pids/$appname.pid"
+}
+
+# function to stop webapps projects by name 
+stop_app(){
+appname=$1
+kill `cat $(pwd)/webapps/pids/$appname.pid`
+}
+
+# to deploy webapps according to $1 and $2 that we get from Makefile 
+# or to stop webapps according to $1 and $2 that we get from Makefile
+if [ $2 = "terminate" ]                         #stop app
+then
+   echo "we are going to stop webapps"
+    if [ $1 = "all" ]                           #all app
+    then
+        index=0
+        for i in "${webapps_list[@]}"
+        do
+            echo "to stop $i"
+            stop_app $i
+            index=$(($index + 1))
+        done    
+    else                                        #specific app
+        index=0
+        for i in "${webapps_list[@]}"
+        do
+            if [ $1 = $i ]
+            then
+                echo "to stop $i"
+                stop_app $i
+            fi
+            index=$(($index + 1))     
+        done   
+    fi
+elif [ $2 = "default" ]                         #get and deploy app
+then
+    echo "we are going to get and deploy webapps"
+    if [ $1 = "all" ]                           #all app
+    then
+        test -x $NODE || exit 0
+        index=0
+        for i in "${webapps_list[@]}"
+        do
+            echo "to get $i"
+            get_app $i
+            echo "to deploy $i"
+            if [ ! -d $(pwd)/webapps/$i/dist/node_modules ]
+            then
+                pushd $(pwd)/webapps/$i/dist/ > /dev/null
+                npm install
+                popd > /dev/null
+            fi        
+            start_app $i ${webapps_port[index]}
+            index=$(($index + 1))
+        done    
+    else                                        #specific app
+        test -x $NODE || exit 0
+        index=0
+        for i in "${webapps_list[@]}"
+        do
+            if [ $1 = $i ]
+            then
+                echo "to get $i"
+                get_app $i
+                echo "to deploy $i"
+                if [ ! -d $(pwd)/webapps/$i/dist/node_modules ]
+                then
+                    pushd $(pwd)/webapps/$i/dist/ > /dev/null
+                    npm install
+                    popd > /dev/null
+                fi
+                start_app $i ${webapps_port[index]}
+            fi
+            index=$(($index + 1))     
+        done   
+    fi
+elif [ $2 = "complete" ]                        #clone, build and deploy app
+then
+    echo "we are going to clone, build and deploy webapps"
+    if [ $1 = "all" ]                           #all app
+    then
+        test -x $NODE || exit 0
+        index=0
+        for i in "${webapps_list[@]}"
+        do
+            echo "to clone, $i"
+            clone_apps $i
+            echo "to build $i"
+            build_apps $i
+            echo "to deploy $i"
+            if [ ! -d $(pwd)/webapps/$i/dist/node_modules ]
+            then
+                pushd $(pwd)/webapps/$i/dist/ > /dev/null
+                npm install
+                popd > /dev/null
+            fi        
+            start_app $i ${webapps_port[index]}
+            index=$(($index + 1))
+        done
+    else                                        #specifi app
+        test -x $NODE || exit 0
+        index=0
+        for i in "${webapps_list[@]}"
+        do
+            if [ $1 = $i ]
+            then
+                echo "to clone, $i"
+                clone_apps $i
+                echo "to build $i"
+                build_apps $i
+                echo "to deploy $i"
+                if [ ! -d $(pwd)/webapps/$i/dist/node_modules ]
+                then
+                    pushd $(pwd)/webapps/$i/dist/ > /dev/null
+                    npm install
+                    popd > /dev/null
+                fi
+                start_app $i ${webapps_port[index]}
+            fi
+            index=$(($index + 1))
+        done    
+    fi
+else
+    echo "deployment options not support, it should be either default or complete"
+fi

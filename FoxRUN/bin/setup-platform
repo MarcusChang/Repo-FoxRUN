@@ -1,0 +1,71 @@
+#!/bin/bash
+
+# Download isolate app for test.
+# For phone, need to install app by firerfox app manager. For browser, directly use dowloaded file.
+# Use git clone due to wget need to input username and password in command line
+
+XULRUNNER_DIRECTORY=$(pwd)/xulrunner-sdk-30/xulrunner-sdk
+XPCSHELL=$XULRUNNER_DIRECTORY/bin/xpcshell
+XPCSHELL_LIBRARY_PATH=$XULRUNNER_DIRECTORY/bin:$XULRUNNER_DIRECTORY/lib
+
+JS=$(pwd)/bin/install-app.js
+ROOTDIR=$(pwd)/platform_apps
+
+FLIP=flipping-tiles
+INFINITE=infinite-scroll
+TRANSITION=transitions-performance
+URL_PREFIX=git@code.marcus_chang.com:platform-issues
+
+declare -a isolate_apps_list=(
+    $FLIP
+    $INFINITE
+    $TRANSITION
+)
+declare -a isolate_apps_url=(
+    $URL_PREFIX/$FLIP.git
+    $URL_PREFIX/$INFINITE.git
+    $URL_PREFIX/$TRANSITION.git
+)
+
+if [ ! -d "$ROOTDIR" ]
+then
+    mkdir $ROOTDIR
+fi
+
+adb forward tcp:6000 localfilesystem:/data/local/debugger-socket
+
+pushd $ROOTDIR > /dev/null
+index=0
+for i in "${isolate_apps_list[@]}"
+do
+    if [ $1 = "all" -o $1 = `echo $i | tr - _` ]
+    then
+        if [ ! -d "$ROOTDIR/$i" ]
+        then
+            if ! git clone ${isolate_apps_url[index]}
+            then
+                index=$(($index + 1))
+                continue
+            fi
+        else
+            pushd $ROOTDIR/$i > /dev/null
+            git pull
+            popd > /dev/null
+        fi
+        ID=`echo $i | tr A-Z a-z`
+        echo "ZIPPING $i into application.zip"
+        pushd $ROOTDIR/$i > /dev/null
+        zip -Xr ./application.zip ./* -x application.zip *.appcache
+        echo "PUSHING *${ID}* as packaged app"
+        adb push $ROOTDIR/$i/application.zip /data/local/tmp/b2g/${ID}/application.zip
+        echo "!!! CONFIRM THE PROMPT on the phone !!!"
+        LD_LIBRARY_PATH=$XPCSHELL_LIBRARY_PATH ${XPCSHELL} $JS ${ID} 6000
+        sleep 10
+        popd > /dev/null
+    fi
+    index=$(($index + 1))
+done
+popd > /dev/null
+
+
+

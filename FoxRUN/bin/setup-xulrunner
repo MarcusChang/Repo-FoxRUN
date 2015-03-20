@@ -1,0 +1,40 @@
+#!/bin/bash
+
+#setup for firefox xulrunner (xpcshell)
+XULRUNNER_BASE_DIRECTORY=xulrunner-sdk-30
+XULRUNNER_DIRECTORY=$XULRUNNER_BASE_DIRECTORY/xulrunner-sdk
+XULRUNNER_URL_FILE=$XULRUNNER_BASE_DIRECTORY/.url
+XULRUNNER_SDK_DOWNLOAD=http://ftp.mozilla.org/pub/mozilla.org/xulrunner/nightly/2014/03/2014-03-08-03-02-03-mozilla-central/xulrunner-30.0a1.en-US.linux-x86_64.sdk.tar.bz2
+XULRUNNERSDK=$(pwd)/$XULRUNNER_DIRECTORY/bin/run-mozilla.sh
+XPCSHELLSDK=$(pwd)/$XULRUNNER_DIRECTORY/bin/xpcshell
+export XULRUNNER_DIRECTORY XULRUNNERSDK XPCSHELLSDK
+
+echo "XULrunner directory: $XULRUNNER_DIRECTORY"
+
+if [ ! -d "$XULRUNNER_DIRECTORY" ]
+then
+	echo "Downloading XULRunner..."
+	wget -c $XULRUNNER_SDK_DOWNLOAD
+	mkdir $XULRUNNER_BASE_DIRECTORY
+	echo "Unzipping XULRunner..."
+	tar xjf xulrunner*.tar.bz2 -C $XULRUNNER_BASE_DIRECTORY 
+	echo "Removing XULRunner tar pacakge..."
+	rm -f xulrunner*.tar.bz2
+	echo $XULRUNNER_SDK_DOWNLOAD > $XULRUNNER_URL_FILE
+else
+	if [ $XULRUNNER_SDK_DOWNLOAD != `cat $XULRUNNER_URL_FILE` ]
+	then
+		echo "XULRunner version is not correct" 
+		rm -rf $XULRUNNER_BASE_DIRECTORY
+		mkdir $XULRUNNER_BASE_DIRECTORY
+		echo "Downloading XULRunner..."
+		wget -c $XULRUNNER_SDK_DOWNLOAD
+		echo "Unzipping XULRunner..."
+		tar xjf xulrunner*.tar.bz2 -C $XULRUNNER_BASE_DIRECTORY 
+		echo "Removing XULRunner tar pacakge..."
+		rm -f xulrunner*.tar.bz2
+		echo $XULRUNNER_SDK_DOWNLOAD > $XULRUNNER_URL_FILE
+	else
+		echo "XULRunner is installed already"
+	fi
+fi

@@ -1,0 +1,10 @@
+#!/bin/bash
+
+currentPath=$(pwd)
+
+#Run JAVA WebDriver Test
+echo "webdriver-chrome started" 
+dest="$currentPath/smoketest/webdrivertest"
+pushd $dest > /dev/null
+ant run 
+popd > /dev/null

@@ -1,0 +1,18 @@
+{
+  "executables": [
+        { "path":"ave_test.py",
+          "tags":["ave_test"],
+          "banner": "ave gaia test",
+          "profiles":[
+            {"type":"workspace",
+              "tools":["download-rom", "run-ave-test", "precondition"] },
+            {"type":"handset", "platform":"firefox"}] },
+        { "path": "get_workspace.py",
+          "tags": ["get_workspace"],
+          "banner": "get device number",
+          "profiles": [
+            { "type":"workspace",
+              "tools":["download-rom", "run-ave-test", "precondition"] },
+	        { "type":"handset", "platform":"firefox" }] }
+  ]
+}

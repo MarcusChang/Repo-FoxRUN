@@ -1,0 +1,82 @@
+#!/bin/bash
+
+TEST_PATH=$(pwd)/pythontests
+WEBAPP_TEST=$TEST_PATH/webapptest
+
+source $TEST_PATH/pythonenv/bin/activate
+
+if [ "$2" = "all" ]
+then
+    if [ $(grep -c . $(pwd)/ApplicationList.ini) -le 1 ]
+    then
+        echo -e "\033[31m Please firstly add test target application name at $(pwd)/ApplicationList.ini, or input application name at terminal \033[0m"
+        exit 0
+    fi
+elif [ "$2" = "" ]
+then
+        echo -e "\033[31m Please input right paramter terminal after make command  , for example make * app_name=str \033[0m"
+        exit 0
+fi
+
+
+#the device serial is mandatory on Jenkins, otherwise is optional
+if [ $3 = 'none' ]
+then
+    device_param=""
+    adb_device=""
+else
+    if [ $1 = "b2gperf" ]
+    then
+        device_param="--device-serial=$3"
+    else
+        device_param="--device=$3"
+    fi
+    adb_device="-s $3"
+fi
+
+adb $adb_device root
+sleep 1
+adb $adb_device forward tcp:2828 tcp:2828
+
+#add target application into ".ini" file
+source $(pwd)/bin/config-init.sh $2 $(pwd)
+
+#install test target app according to app install list file "ApplicationList.ini"
+python $WEBAPP_TEST/mixins/install.py --filename=$(pwd)/ApplicationList.ini --testvars=$WEBAPP_TEST/testvars.json
+
+
+#modfiy marionette.py so that it can support multiple devices test on one PC
+source $(pwd)/bin/setup-forward-devices.sh $(pwd)
+
+source $(pwd)/bin/remove_gaiacode.sh $(pwd)
+
+GEN_PARAM="--address=localhost:2828  $device_param --testvars=../testvars.json --timeout=60000 --html-output=result-`date +%y%m%d%H%M%S`.html"
+case $1 in
+    ui)
+        pushd $WEBAPP_TEST/ui > /dev/null
+        gaiatest --type=b2g $GEN_PARAM manifest.ini
+        popd > /dev/null;;
+    endurance)
+        pushd $WEBAPP_TEST/endurance > /dev/null
+        gaiatest --type=b2g $GEN_PARAM --iterations=$4 --checkpoint=$5 manifest.ini
+        popd > /dev/null;;
+    mtbf)
+        pushd $WEBAPP_TEST/mtbf > /dev/null
+        MTBF_TIME=$4 MTBF_CONF=mtbf_config.json mtbf $GEN_PARAM ./
+        popd > /dev/null;;
+    performance)
+        pushd $WEBAPP_TEST/performance > /dev/null
+        gaiatest --type=b2g $GEN_PARAM --iterations=$4  manifest.ini
+        popd > /dev/null;;
+    b2gperf)
+        while read line
+        do
+            if [[ $line =~ ^[A-Za-z_]+$ ]];
+            then
+               b2gperf $line $device_param --testvars=$WEBAPP_TEST/testvars.json --iterations=$4 --no-restart
+            fi
+        done <$(pwd)"/ApplicationList.ini";;
+    *)
+        echo "options not support";;
+esac
+

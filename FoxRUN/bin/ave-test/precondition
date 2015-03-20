@@ -1,0 +1,8 @@
+#!/bin/bash
+
+WORKSPACE_ROOT=$HOME/.ave
+UTILS_ROOT=$WORKSPACE_ROOT/webapptest
+pushd $UTILS_ROOT > /dev/null
+make precondition device=$1
+popd > /dev/null
+

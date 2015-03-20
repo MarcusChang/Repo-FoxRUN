@@ -1,0 +1,23 @@
+#!/bin/bash
+
+#setup for AVE Marionette
+echo "we are going to install AVE"
+INSTALLED_OK="Status: install ok installed"
+if [ "$(dpkg -s ave | grep Status)" != "$INSTALLED_OK" ]
+then
+    echo "Updating the list of available packages"
+	sudo apt-get update
+    echo "Downloading ave..."
+	sudo apt-get install ave
+else
+	if [ "$(apt-cache show ave | grep Version | head -1)" != "$(dpkg -s ave | grep Version)" ]
+	then
+		echo "New package be available for installation"
+		echo "Updating the list of available packages"
+		sudo apt-get update
+    	echo "Downloading ave..."
+		sudo apt-get install ave
+	else
+		echo "latest ave is already installed"
+	fi
+fi

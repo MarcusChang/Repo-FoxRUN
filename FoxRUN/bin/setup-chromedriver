@@ -1,0 +1,19 @@
+#!/bin/bash
+
+#setup for webdriver/chromedriver
+echo "we are going to install chromedriver"
+if [ ! -f $(pwd)/smoketest/webdrivertest/chromedriver ]
+then
+    echo "Downloading chromedriver..."
+    pkg=http://chromedriver.storage.googleapis.com/2.7/chromedriver_linux64.zip
+	dest=`mktemp -d`
+	pushd $dest > /dev/null
+	wget -O chromedriver.zip $pkg
+	unzip chromedriver.zip
+	chmod +x chromedriver
+	popd > /dev/null
+	cp $dest/chromedriver smoketest/webdrivertest/chromedriver 
+	rm -r $dest
+else
+	echo "chromedriver is already installed"
+fi

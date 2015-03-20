@@ -1,0 +1,50 @@
+#!/bin/bash
+
+# push media content to device
+
+declare -a webapps_list=(album movies walkman)
+
+sdcard="/sdcard/"
+
+declare -a webapps_push=(
+    "test_media/DCIM /sdcard/DCIM"
+    "test_media/Movies /sdcard/Movies"
+    "test_media/Music /sdcard/Music"
+)
+declare -a webapps_mediapath=(
+    "DCIM"
+    "Movies"
+    "Music"
+)
+
+#the device serial is mandatory on Jenkins, otherwise is optional
+if [ $3 = 'none' ]
+then
+    device_param=""
+else
+    device_param="-s $3"
+fi
+
+if [ ! $2 = "marionette-firefox-host" ]
+    then
+    index=0
+    for i in "${webapps_list[@]}"
+    do
+        if [ $1 = "all" -o $1 = $i ]
+        then
+            FILENAME_RESULT=$(adb $device_param shell ls $sdcard |grep ${webapps_mediapath[index]})
+            if [ -z "$FILENAME_RESULT" ];
+            then
+                adb $device_param shell mkdir $sdcard${webapps_mediapath[index]}
+            fi
+
+            value=$(adb $device_param shell ls $sdcard${webapps_mediapath[index]} |wc -l)
+            if [ $value -eq 0 ]
+            then
+                adb $device_param push ${webapps_push[index]}
+            fi
+        fi
+        index=$(($index + 1))
+    done
+fi
+

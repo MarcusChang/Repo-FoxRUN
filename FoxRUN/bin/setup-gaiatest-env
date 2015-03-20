@@ -1,0 +1,62 @@
+#!/bin/bash
+
+TEST_PATH=$(pwd)/pythontests
+WEBAPP_TEST=$TEST_PATH/webapptest
+
+#download test content
+if [ ! -d $(pwd)"/test_media" ]
+then
+
+version=$(repository listrevisions fxrun-ave-testmedia -pc testcontent | tail -1)
+name=fxrun-ave-testmedia_${version}_all.deb
+repository getpackage -pc testcontent fxrun-ave-testmedia ${version}
+dpkg -x $name .
+rm $name
+
+fi
+
+#MTBF env setup. clone gaia and mtbf-driver.
+VIRTUALENV=`which virtualenv`
+if [ ! -x "$VIRTUALENV" ] ; then
+    sudo apt-get install python-virtualenv
+    VIRTUALENV=`which virtualenv`
+fi
+
+if [ ! -d $TEST_PATH/pythonenv ]
+then
+    pushd $TEST_PATH > /dev/null
+    $VIRTUALENV pythonenv
+    popd > /dev/null
+fi
+
+
+source $TEST_PATH/pythonenv/bin/activate
+
+if [ ! -d $TEST_PATH/MTBF-Driver ]
+then
+    pushd $TEST_PATH > /dev/null
+    git clone https://github.com/Mozilla-TWQA/MTBF-Driver.git
+    git clone https://github.com/mozilla-b2g/B2G.git
+    cp -r $TEST_PATH/B2G/tools $TEST_PATH/MTBF-Driver/mtbf_driver
+    touch $TEST_PATH/MTBF-Driver/mtbf_driver/tools/__init__.py
+    rm -rf B2G
+    popd > /dev/null
+    pushd $TEST_PATH/MTBF-Driver > /dev/null
+    python setup.py develop
+    popd > /dev/null
+else
+    pushd $TEST_PATH/MTBF-Driver > /dev/null
+    git pull
+    python setup.py develop
+    popd > /dev/null
+fi
+
+pushd $TEST_PATH > /dev/null
+python setup.py develop
+popd > /dev/null
+
+if [ ! -d $TEST_PATH/pythonenv/lib/python2.7/site-packages/b2gperf ]
+then
+    pip install b2gperf
+fi
+

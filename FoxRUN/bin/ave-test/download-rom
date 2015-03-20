@@ -1,0 +1,57 @@
+#!/bin/bash
+
+WORKSPACE_ROOT=$HOME/.ave
+UTILS_ROOT=$WORKSPACE_ROOT/webapptest
+pushd $UTILS_ROOT/bin/ave-test > /dev/null
+
+declare -a DEVICES=(proto_t proto_f ff1)
+declare -a ARTIFACTS=(daily_build_ffos daily_build_kk-helenium-pre-v2.1 daily_build_kk-helenium-pre-v2.1)
+declare -a DEVICE_NAMES=(proto_t ff1 ff1)
+
+if [ $1 = 'none' ]; then
+    device_param=""
+else
+    device_param="-s $1"
+fi
+# currently ro.product.model ro.product.name ro.product.device are same. Such as "proto_t", "proto_f"
+# $device has a ^M character.
+
+device=`adb $device_param shell getprop ro.product.model`
+device=${device:0:$((${#device}-1))}
+serialno=`adb $device_param shell getprop ro.serialno`
+serialno=${serialno:0:$((${#serialno}-1))}
+
+artifact=""
+
+index=0
+for i in "${DEVICES[@]}"
+do
+    if [[ $device = $i ]]; then
+        artifact=${ARTIFACTS[index]}
+        device_name=${DEVICE_NAMES[index]}
+        break
+    fi
+    index=$(($index + 1))
+done
+
+# Get the package name to be flashed
+wget --no-proxy --output-document=$device.json http://android-ci-platform.marcus_chang.com/job/$artifact/lastSuccessfulBuild/api/json?pretty=true
+line=`cat $device.json | grep "result-dir/$device_name-userdebug" | grep zip`
+#BUILD=${line##*\/};BUILD=${BUILD%\"*}
+BUILD=`echo $line | sed 's/^.*\///g;s/\".*$//g'`
+echo "Latest build is $BUILD"
+
+# If package not exist. Download it.
+if [ ! -f $BUILD ]; then
+    wget --no-proxy http://android-ci-platform.marcus_chang.com/job/$artifact/lastSuccessfulBuild/artifact/result-dir/$BUILD
+fi
+
+path="result-dir_$serialno"
+if [ -d $path ]; then
+    rm -rf $path
+fi
+unzip $BUILD -d $path
+echo $device
+
+popd > /dev/null
+
